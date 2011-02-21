@@ -1,5 +1,7 @@
 package org.neo4j.spring_tx;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -25,18 +27,22 @@ import static org.junit.Assert.assertEquals;
  */
 
 public class JOTMIntegrationTest {
-    @Test
-    public void testLoadConfig() throws SystemException, NotSupportedException {
-        ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:spring-tx-text-context.xml");
-        GraphDatabaseService gds = ctx.getBean(GraphDatabaseService.class);
-        Current current = ctx.getBean("jotm", Current.class);
-        JtaTransactionManager tm = ctx.getBean("transactionManager", JtaTransactionManager.class);
-        Transaction transaction = tm.createTransaction("jotm", 1000);
-        assertEquals(ManagedTransactionAdapter.class, transaction.getClass());
-        assertEquals(Current.class, ((ManagedTransactionAdapter) transaction).getTransactionManager().getClass());
-        Map<Object, Object> config = ((EmbeddedGraphDatabase) gds).getConfig().getParams();
-        assertEquals("spring-jta", config.get(Config.TXMANAGER_IMPLEMENTATION));
+    private ClassPathXmlApplicationContext ctx;
+    private GraphDatabaseService gds;
 
+    @Before
+    public void setUp() throws Exception {
+        ctx = new ClassPathXmlApplicationContext("classpath:spring-tx-text-context.xml");
+        gds = ctx.getBean(GraphDatabaseService.class);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        if (ctx!=null) ctx.close();
+    }
+
+    @Test
+    public void testIndexDependencies() throws Exception {
         org.neo4j.graphdb.Transaction tx = gds.beginTx();
         try {
             Index<Node> index = gds.index().forNodes("node");
@@ -46,5 +52,17 @@ public class JOTMIntegrationTest {
         } finally {
             tx.finish();
         }
+    }
+
+    @Test
+    public void testLoadConfig() throws SystemException, NotSupportedException {
+        Current current = ctx.getBean("jotm", Current.class);
+        JtaTransactionManager tm = ctx.getBean("transactionManager", JtaTransactionManager.class);
+        Transaction transaction = tm.createTransaction("jotm", 1000);
+        assertEquals(ManagedTransactionAdapter.class, transaction.getClass());
+        assertEquals(Current.class, ((ManagedTransactionAdapter) transaction).getTransactionManager().getClass());
+        Map<Object, Object> config = ((EmbeddedGraphDatabase) gds).getConfig().getParams();
+        assertEquals("spring-jta", config.get(Config.TXMANAGER_IMPLEMENTATION));
+
     }
 }
