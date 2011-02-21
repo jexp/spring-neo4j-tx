@@ -33,6 +33,7 @@ public class JOTMIntegrationTest {
         JtaTransactionManager tm = ctx.getBean("transactionManager", JtaTransactionManager.class);
         Transaction transaction = tm.createTransaction("jotm", 1000);
         assertEquals(ManagedTransactionAdapter.class, transaction.getClass());
+        assertEquals(Current.class, ((ManagedTransactionAdapter)transaction).getTransactionManager().getClass());
         Map<Object,Object> config = ((EmbeddedGraphDatabase) gds).getConfig().getParams();
         assertEquals("spring-jta",config.get(Config.TXMANAGER_IMPLEMENTATION));
     }
