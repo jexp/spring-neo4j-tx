@@ -33,7 +33,6 @@ import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.transaction.jta.JtaTransactionManager;
 
 /**
@@ -55,11 +54,11 @@ class SpringServiceImpl extends AbstractTransactionManager
     public void init( XaDataSourceManager xaDsManager )
     {
         delegate = jtaTransactionManager.getTransactionManager();
-        System.out.println("delegate = " + delegate);
     }
 
     public void begin() throws NotSupportedException, SystemException
     {
+        delegate.begin();
     }
 
     public void commit() throws RollbackException, HeuristicMixedException,

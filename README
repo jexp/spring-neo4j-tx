@@ -1,0 +1,41 @@
+The problems with recovery
+	- or -
+why this thing doesn't work yet
+-------------------------------
+
+While the most common usage of transaction managers is the coordination of transactional resources with a protocol like 2PC,
+another critical aspect of their usage comes from the ability to recover transactions that have failed due to system crash,
+be that the transaction manager itself, another coordinating resource (like the OS) or one of the participating resources. For
+the rest of this text, we will focus on XA compliant transactional systems (transaction manager + transactional resources) as
+implemented by JTA.
+
+While the JTA specification is very descriptive of almost all the aspects of distributed transactions, including the recovery process,
+it leaves out a critical issue: how the XA resources that participated in a global transaction that was not decided upon because of
+a crash will register with and inform the coordinating transaction manager of the xid of dangling local transactions, their vote etc.
+Because of that, every implementation has its own way of dealing with the issue (for example, JOTM is simply happy to have instances
+of XAResource registered and recovery being asked for explicitly while JBoss asks for serialized objects to be available somewhere 
+for retrieval).
+
+This leads to a situation where having true distributed transactions with JTA in a manner transparent over the actual txm implementation
+is next to impossible. While the instantiation/retrieval of the TransactionManager object can be abstracted, the recovery process is
+too tightly bound to the lifecycle of the applications that implement XAResource and of the way the txm implementation does recovery.
+
+The question here is of course how does Spring fare on this aspect, since it provides a uniform access method irrespective of the actually
+plugged in implementation of the txm. If it indeed succeeds in transparently handling recovery after crashes then there are no problems and
+everything should work as expected simply by registering resources in the Transaction object. If, however, there is no such facility in place
+yet, then recovery cannot work. Let's see an example
+
+If I have configured jotm as the txm implementation, then I can simply retrieve the object (as a TransactionManager) from the
+org.springframework.transaction.jta.JtaTransactionManager and have my XAResources registered there. The same goes for every other
+part that is ready to participate in 2PC and the user is blissfully unaware of the actual workings. However, if the system crashes, then
+jotm expects calls to Current.getTransactionRecovery().registerResourceManager() that will register all previously used resources
+and then a call to Current.getTransactionRecovery().startResourceManagerRecovery() to actually recover all pending txs. JBoss does this
+differently, as does Atomikos etc. Also, this call must be blocking because there is no requirement that a XA compatible storage system
+must be able to serve requests while transactions are pending. Neo4j, for instance, will not serve requests while the store is not restored
+to a clean state.
+
+So, the question for the Spring hackers is, how do you provide recovery guarantees for all TransactionManager implementations you support
+while hiding the details from the XA enabled components running in your framework? Or, to be more specific, if Neo4j uses the user configured,
+external txm implementation via the Spring interfaces, what steps/API should it use to ensure that it will be recovered after a crash?
+
+-- Edited by Chris Gioran
