@@ -31,14 +31,20 @@ import javax.transaction.TransactionManager;
 
 import org.neo4j.kernel.impl.transaction.AbstractTransactionManager;
 import org.neo4j.kernel.impl.transaction.XaDataSourceManager;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.transaction.jta.JtaTransactionManager;
 
 /**
  * @author Chris Gioran
  */
+@Configurable
 class SpringServiceImpl extends AbstractTransactionManager
 {
+    @Autowired
+    private JtaTransactionManager jtaTransactionManager;
+
     private TransactionManager delegate;
 
     SpringServiceImpl()
@@ -48,8 +54,8 @@ class SpringServiceImpl extends AbstractTransactionManager
     @Override
     public void init( XaDataSourceManager xaDsManager )
     {
-        ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:spring-tx-text-context.xml");
-        delegate = ctx.getBean( "transactionManager", JtaTransactionManager.class ).getTransactionManager();
+        delegate = jtaTransactionManager.getTransactionManager();
+        System.out.println("delegate = " + delegate);
     }
 
     public void begin() throws NotSupportedException, SystemException
